@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import os
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +14,34 @@ from sane.data.cache import DiskCache
 from sane.data.datasets.windowed_dataset import WindowedDataset
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_cache_dir(configured: Optional[Union[str, Path]] = None) -> Path:
+    """Portable token-cache location.
+
+    Resolution order:
+      1. $SANE_CACHE_DIR          -- overrides everything, including config
+      2. the configured cache_dir
+      3. $XDG_CACHE_HOME/sane/tokens
+      4. ~/.sane/cache/tokens     -- the default the configs already document
+
+    The env var deliberately outranks the config. A published checkpoint
+    carries its training machine's absolute cache path inside checkpoint.pt,
+    so a value that only applied when cache_dir was null could never rescue
+    one. This matches TORCH_HOME / HF_HOME conventions.
+
+    Replaces a hardcoded "/local/cache/tokens" fallback, which contradicted
+    the config comments and is unwritable outside the machine it came from.
+    """
+    env = os.environ.get("SANE_CACHE_DIR")
+    if env:
+        return Path(env).expanduser()
+    if configured:
+        return Path(configured).expanduser()
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    if xdg:
+        return Path(xdg).expanduser() / "sane" / "tokens"
+    return Path.home() / ".sane" / "cache" / "tokens"
 
 
 class CachedWindowedDataset(WindowedDataset):
@@ -90,7 +119,7 @@ class CachedWindowedDataset(WindowedDataset):
 
         self._global_cache = global_cache
         self._read_only = read_only
-        self._base_cache_dir = Path(cache_dir or "/local/cache/tokens")
+        self._base_cache_dir = resolve_cache_dir(cache_dir)
         dataset_part = self.dataset_name or "default"
         split_part = self.split_name or "default"
         subdir = "checkpoint" if cache_mode == "per_model" else "window"

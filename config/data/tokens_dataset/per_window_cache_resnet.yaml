@@ -6,4 +6,4 @@ allow_overlapping_windows: False                  # Whether to allow overlapping
 window_distribution_strategy: "consecutive"       # Strategy for distributing non-overlapping windows. Options: "consecutive" (start from beginning), "distributed" (spread across sequence).
 
 # Disk caching configuration (reduces memory usage for large datasets)
-cache_dir: "/local/cache3/tokens"                                   # Cache directory (null = default ~/.sane/cache/tokens)
+cache_dir: null                                   # Cache directory (null = default ~/.sane/cache/tokens)

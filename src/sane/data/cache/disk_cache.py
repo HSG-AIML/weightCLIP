@@ -34,7 +34,16 @@ class DiskCache:
 
         # Create cache directory if it doesn't exist
         if create_dirs:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+            except (PermissionError, OSError) as exc:
+                raise RuntimeError(
+                    f"Cannot create the token cache at {self.cache_dir}: {exc}. "
+                    "Set SANE_CACHE_DIR to a writable directory, or set "
+                    "data.tokens_dataset.cache_dir in the config. This usually "
+                    "means a checkpoint was saved with an absolute cache path "
+                    "from another machine."
+                ) from exc
 
         # Cache statistics
         self._stats = {'hits': 0, 'misses': 0, 'writes': 0}
